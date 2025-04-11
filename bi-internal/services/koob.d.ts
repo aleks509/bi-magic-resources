@@ -91,6 +91,7 @@ export interface IKoobFiltersModel {
 }
 
 export class KoobFiltersService extends BaseService<IKoobFiltersModel> {
+    [x: string]: any;
     private constructor();
 
     public static getInstance(): KoobFiltersService

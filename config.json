@@ -1,4 +1,6 @@
 {
-  "port": 3003,
-  "server": ""
+  "server": "https://dit.luxmsbi.ru",
+  "port": 3000,
+  "force": true,
+  "noRemove": true
 }
