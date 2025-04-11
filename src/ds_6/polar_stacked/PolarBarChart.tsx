@@ -86,6 +86,9 @@ const PolarBarChart = ({ dp, subspace }: any) => {
       style={{
         backgroundColor: "#F4F7FA",
         padding: "16px",
+        width: "100%",
+        height: "100%",
+        boxSizing: "border-box",
       }}
     >
       <h1
@@ -100,7 +103,7 @@ const PolarBarChart = ({ dp, subspace }: any) => {
       >
         Итоги за май 2024 года
       </h1>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={250}>
         <RadialBarChart
           cx="50%"
           cy="50%"

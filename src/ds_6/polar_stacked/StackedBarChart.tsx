@@ -123,7 +123,7 @@ const StackedBarChart = (props: any) => {
   return (
     <div className="container">
       <h1 className="title">Итоги за май 2024 года в разрезе услуг</h1>
-      <ResponsiveContainer width="100%" height={350}>
+      <ResponsiveContainer width="100%" height={300}>
         <BarChart
           data={getNormalizedChartData()}
           margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
