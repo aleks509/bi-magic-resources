@@ -15,7 +15,6 @@ import "./styles.css";
 
 const StackedBarChart = (props: any) => {
   const { cfg, subspace, dp } = props;
-
   const [koobData, setKoobData] = useState<any[]>([]);
   const filterModel = useService<KoobFiltersService>(KoobFiltersService);
 
@@ -31,6 +30,8 @@ const StackedBarChart = (props: any) => {
       .then((rawData: any[]) => {
         const filtredNames = rawData.filter((el) => el.name !== "Личный шифр");
         setKoobData(filtredNames);
+        console.log("data=>>>", filtredNames);
+        console.log("filterModel", filterModel);
       })
       .catch((error) => {
         console.error("Ошибка при получении данных:", error);
@@ -38,7 +39,6 @@ const StackedBarChart = (props: any) => {
   }, [subspace, subspace?.filters, cfg]);
 
   const selectedDatesUnique = unique(koobData.map((el) => el.dt)).slice(0, 2);
-
   const selectedOrgNamesUnique = unique(koobData.map((el) => el.org_name));
 
   const orgNameWithIndex = selectedOrgNamesUnique.map((orgName, index) => ({
@@ -47,46 +47,51 @@ const StackedBarChart = (props: any) => {
   }));
 
   const getNormalizedChartData = () => {
-    const chartData: any[] = [];
-
+    const chartDataMap: Record<string, any> = {};
     let maxSum = 0;
 
     selectedDatesUnique.forEach((dt) => {
+      const row: any = { dt };
       selectedOrgNamesUnique.forEach((org) => {
-        const total = koobData
-          .filter((el) => el.dt === dt && el.org_name === org)
-          .reduce((sum, item) => sum + item.value, 0);
-
-        if (total > maxSum) {
-          maxSum = total;
-        }
+        colorsCategories.forEach((cat) => {
+          row[`${org}_${cat.name}`] = 0;
+        });
       });
+      chartDataMap[dt] = row;
+    });
+
+    koobData.forEach((item) => {
+      if (selectedDatesUnique.includes(item.dt)) {
+        const row = chartDataMap[item.dt];
+        if (row) {
+          const key = `${item.org_name}_${item.name}`;
+          row[key] = (row[key] || 0) + item.value;
+        }
+      }
     });
 
     selectedDatesUnique.forEach((dt) => {
+      const row = chartDataMap[dt];
       selectedOrgNamesUnique.forEach((org) => {
-        const entry: any = {
-          label: `${dt} — ${org}`,
-          dt,
-          org,
-        };
-
-        colorsCategories.forEach((category) => {
-          const matched = koobData.find(
-            (item) =>
-              item.dt === dt &&
-              item.org_name === org &&
-              item.name === category.name
-          );
-          const rawValue = matched?.value || 0;
-          entry[category.name] = maxSum > 0 ? (rawValue * 100) / maxSum : 0;
+        let orgTotal = 0;
+        colorsCategories.forEach((cat) => {
+          orgTotal += row[`${org}_${cat.name}`];
         });
-
-        chartData.push(entry);
+        if (orgTotal > maxSum) maxSum = orgTotal;
+        row[`${org}_total`] = orgTotal;
       });
     });
 
-    return chartData;
+    Object.values(chartDataMap).forEach((row: any) => {
+      selectedOrgNamesUnique.forEach((org) => {
+        colorsCategories.forEach((cat) => {
+          const key = `${org}_${cat.name}`;
+          row[key] = maxSum > 0 ? (row[key] * 100) / maxSum : 0;
+        });
+      });
+    });
+
+    return Object.values(chartDataMap);
   };
 
   const RoundedGapBar = (props: any) => {
@@ -111,7 +116,7 @@ const StackedBarChart = (props: any) => {
         {orgNameWithIndex.map((item) => (
           <span
             key={item.ind}
-            style={{ marginRight: "16px", fontSize: "14px", color: "#292929" }}
+            style={{ marginRight: "16px", fontSize: "16px", color: "#292929" }}
           >
             {item.ind}. {item.orgName}
           </span>
@@ -119,22 +124,35 @@ const StackedBarChart = (props: any) => {
       </div>
     );
   };
+  //потом
+  const orgIndexMap = orgNameWithIndex.reduce((acc, cur) => {
+    acc[cur.orgName] = cur.ind;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const normalizedChartData = getNormalizedChartData();
 
   return (
     <div className="container">
       <h1 className="title">Итоги за май 2024 года в разрезе услуг</h1>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart
-          data={getNormalizedChartData()}
+          data={normalizedChartData}
           margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
         >
           <CartesianGrid stroke="#6A6A6A33" vertical={false} />
           <XAxis
             dataKey="dt"
-            interval={0}
-            angle={-45}
-            textAnchor="end"
-            tick={false}
+            tickLine={false}
+            axisLine={false}
+            tick={{
+              textAnchor: "middle",
+              fontSize: 18,
+            }}
+            tickFormatter={(tick) => {
+              const parts = tick.split("-");
+              return `${parts[2]}.${parts[1]}.${parts[0]}`;
+            }}
           />
           <YAxis
             domain={[0, 100]}
@@ -144,16 +162,20 @@ const StackedBarChart = (props: any) => {
           />
           <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
           <Legend content={renderCustomLegend} />
-          {colorsCategories.map((cat) => (
-            <Bar
-              key={cat.name}
-              dataKey={cat.name}
-              stackId="a"
-              fill={cat.color}
-              name={cat.name}
-              shape={<RoundedGapBar />}
-            />
-          ))}
+          {selectedOrgNamesUnique.map((org) =>
+            colorsCategories.map((cat, catIndex) => {
+              return (
+                <Bar
+                  key={`${org}_${cat.name}`}
+                  dataKey={`${org}_${cat.name}`}
+                  stackId={org}
+                  fill={cat.color}
+                  name={cat.name}
+                  shape={<RoundedGapBar />}
+                ></Bar>
+              );
+            })
+          )}
         </BarChart>
       </ResponsiveContainer>
     </div>

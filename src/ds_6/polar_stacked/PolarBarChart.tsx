@@ -35,12 +35,13 @@ const PolarBarChart = ({ dp, subspace }: any) => {
 
       setChartData(processedData);
     });
-  }, []);
+  }, [dp, subspace]);
 
   const handleClick = (data: any) => {
     const clickedName = data?.name;
     if (clickedName) {
       koobFiltersService.set({ filters: { name: ["=", clickedName] } });
+      console.log("clickedName=>>", clickedName);
     }
   };
   const renderCustomLegend = (props: any) => {
